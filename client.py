@@ -15,25 +15,27 @@ class Client:
             Client.show_main_menu()
             command = input()
             handler = CommandHandler.parse(command)
-            handler()
+            handler(self)
 
-    def messenger():
+    def firewall_menu_handler(self):
+        pass
+
+    def messenger(self):
         pass
 
     def stream(self):
-        pass
-
-    def firewall(self):
         pass
 
     def show_main_menu():
         for i, item in enumerate(CommandHandler.menu_times):
             print(f"{i + 1}. {CommandHandler.menu_times[item]}")
 
-    def login_as_admin():
-        pass
+    def login_as_admin(self):
+        while not Client.hasher.verify(getpass(), self.password):
+            print("Wrong Password")
+        self.firewall_menu_handler()
 
-    def invalid_command():
+    def invalid_command(self):
         print(CommandHandler.INVALID_COMMAND)
 
 
