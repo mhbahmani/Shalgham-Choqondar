@@ -11,19 +11,19 @@ class Client:
         self.password = password
 
     def main_menu_handler(self):
-        while True:
-            Client.show_main_menu()
-            command = input()
-            handler = CommandHandler.parse(command)
-            handler(self)
+        Client.show_main_menu()
+        while (command := input()) != "exit":
+            if command == "1": self.connect_to_ext_servers()
+            if command == "2": self.login_as_admin()
+            else: self.invalid_command()
 
     def firewall_menu_handler(self):
         pass
 
-    def messenger(self):
+    def messenger(self, proxy_port: int):
         pass
 
-    def stream(self):
+    def stream(self, proxy_port: int):
         pass
 
     def show_main_menu():
@@ -34,6 +34,17 @@ class Client:
         while not Client.hasher.verify(getpass(), self.password):
             print("Wrong Password")
         self.firewall_menu_handler()
+
+    def connect_to_ext_servers(self):
+        while True:
+            user_input = input()
+            match = re.match("(?P<server>(Shalgham|Choghondar))( via (?P<port>\d+))?", user_input)
+            if not match:
+                print("Invalid Server name")
+                continue
+            server, port = match.groupdict()["server"], int(match.groupdict().get("port", 0))
+            if server == "Shalgham": self.messenger(port)
+            elif server == "Choghondar": self.stream(port)
 
     def invalid_command(self):
         print(CommandHandler.INVALID_COMMAND)
@@ -73,5 +84,6 @@ if __name__ == "__main__":
     client = Client(
         Client.hasher.hash(password)
     )
-    client.main_menu_handler()
+    # client.main_menu_handler()
+    client.connect_to_ext_servers()
     
