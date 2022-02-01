@@ -3,11 +3,17 @@ from menus import MainMenu
 from passlib.hash import bcrypt
 from getpass import getpass
 
+import socket
 import re
 
 
 class Client:
     hasher = bcrypt.using(rounds=13)
+    MESSENGER_SERVER_IP = "127.0.0.1"
+    MESSENGER_SERVER_PORT = 8001
+
+    STREAM_SERVER_IP = "127.0.0.1"
+    STREAM_SERVER_PORT = 8002
 
     def __init__(self, password: str) -> None:
         self.password = password
@@ -23,10 +29,12 @@ class Client:
         pass
 
     def messenger(self, proxy_port: int):
-        pass
+        self.connect(Client.MESSENGER_SERVER_IP, Client.MESSENGER_SERVER_PORT)
+        print(self.session_id)
 
     def stream(self, proxy_port: int):
-        pass
+        self.connect(Client.STREAM_SERVER_IP, Client.STREAM_SERVER_PORT)
+        print(self.session_id)
 
     def login_as_admin(self):
         while not Client.hasher.verify(getpass(), self.password):
@@ -40,17 +48,25 @@ class Client:
             if not match:
                 print("Invalid Server name")
                 continue
+            break
             
-            server, port = match.groupdict()["server"], match.groupdict().get("port")
-            if port: port = int(port)
-            if server == "Shalgham": self.messenger(port)
-            elif server == "Choghondar": self.stream(port)
+        server, port = match.groupdict()["server"], match.groupdict().get("port")
+        if port: port = int(port)
+        if server == "Shalgham": self.messenger(port)
+        elif server == "Choghondar": self.stream(port)
+
+    def connect(self, address, port):
+        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.client.connect((address, port))
+        self.session_id = self.client.recv(1024).decode('ascii')
 
 
 if __name__ == "__main__":
-    password = getpass("Set an admin password: ")
+    # password = getpass("Set an admin password: ")
+    password = "hello"
 
     client = Client(
         Client.hasher.hash(password)
     )
-    client.main_menu_handler()
+    # client.main_menu_handler()
+    client.connect_to_ext_servers()
