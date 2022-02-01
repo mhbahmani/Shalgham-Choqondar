@@ -1,8 +1,11 @@
+from menus import CommandHandler
+
 from hashlib import sha256
 
 import threading
 import logging
 import socket
+
 
 class MessengerServer:
     server: socket.socket
@@ -30,7 +33,9 @@ class MessengerServer:
     def handle_client(self, client: socket.socket, session_id: str):
         while not self.end:
             try:
-                pass
+                command = input()
+                handler = CommandHandler.parse(command)
+                handler(self)
             except AttributeError:
                 pass
             except ValueError:
