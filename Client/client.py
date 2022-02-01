@@ -5,7 +5,6 @@ from getpass import getpass
 import re
 
 
-
 class Client:
     hasher = bcrypt.using(rounds=13)
 
@@ -14,9 +13,10 @@ class Client:
 
     def main_menu_handler(self):
         MainMenu().show()
-        command = input()
-        handler = MainMenu.parse(command)
-        handler(self)
+        while True:
+            command = input()
+            handler = MainMenu.parse(command)
+            handler(self)
 
     def firewall_menu_handler(self):
         pass
@@ -48,9 +48,8 @@ class Client:
 
 if __name__ == "__main__":
     password = getpass("Set an admin password: ")
-
+    password = "hello"
     client = Client(
         Client.hasher.hash(password)
     )
     client.main_menu_handler()
-    # client.connect_to_ext_servers()

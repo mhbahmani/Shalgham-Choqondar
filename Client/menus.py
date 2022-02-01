@@ -23,7 +23,7 @@ class MainMenu(metaclass=SingletonMeta):
             item: MenuItem
             if (match := item.regex.match(command)):
                 return item.handler
-        return item.invalid_command()
+        return MenuItem.invalid_command
 
 
 class MenuItem:
@@ -33,5 +33,5 @@ class MenuItem:
         self.handler = handler
         self.menu = menu
 
-    def invalid_command():
+    def invalid_command(self):
         print("Invalid Command")
