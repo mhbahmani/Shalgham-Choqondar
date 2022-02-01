@@ -1,4 +1,4 @@
-from menus import MainMenu
+from menus import MainMenu, MessengerMenu
 
 from passlib.hash import bcrypt
 from getpass import getpass
@@ -59,6 +59,25 @@ class Client:
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((address, port))
         self.session_id = self.client.recv(1024).decode('ascii')
+
+
+class MessengerClient:
+    def __init__(self, session_id) -> None:
+        self.session_id = session_id
+        
+    def signup(self) -> None:
+        pass
+
+    def login(self) -> None:
+        pass
+
+    def handle(self) -> None:
+        MessengerMenu().show()
+        while True:
+            command = input()
+            handler = MessengerMenu.parse(command)
+            handler(self)
+
 
 
 if __name__ == "__main__":
