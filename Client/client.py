@@ -1,4 +1,5 @@
 from menus import MainMenu
+
 from passlib.hash import bcrypt
 from getpass import getpass
 
@@ -48,7 +49,7 @@ class Client:
 
 if __name__ == "__main__":
     password = getpass("Set an admin password: ")
-    password = "hello"
+
     client = Client(
         Client.hasher.hash(password)
     )
