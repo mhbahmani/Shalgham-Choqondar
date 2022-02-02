@@ -16,13 +16,14 @@ class Client:
     STREAM_SERVER_PORT = 8002
 
     def __init__(self, password: str) -> None:
+        self.client: socket.Socket
         self.password = password
 
     def main_menu_handler(self):
         MainMenu().show()
         while True:
             command = input()
-            handler = MainMenu.parse(command)
+            handler, _ = MainMenu().parse(command)
             handler(self)
 
     def firewall_menu_handler(self):
@@ -31,6 +32,8 @@ class Client:
     def messenger(self, proxy_port: int):
         self.connect(Client.MESSENGER_SERVER_IP, Client.MESSENGER_SERVER_PORT)
         print(self.session_id)
+        messenger_client = MessengerClient(self.client, self.session_id)
+        messenger_client.handle()
 
     def stream(self, proxy_port: int):
         self.connect(Client.STREAM_SERVER_IP, Client.STREAM_SERVER_PORT)
@@ -62,7 +65,8 @@ class Client:
 
 
 class MessengerClient:
-    def __init__(self, session_id) -> None:
+    def __init__(self, socket, session_id) -> None:
+        self.socket = socket
         self.session_id = session_id
         
     def signup(self) -> None:
@@ -71,12 +75,16 @@ class MessengerClient:
     def login(self) -> None:
         pass
 
+    def exit(self) -> None:
+        pass
+
     def handle(self) -> None:
         MessengerMenu().show()
         while True:
             command = input()
-            handler = MessengerMenu.parse(command)
+            handler, command_to_send = MessengerMenu().parse(command)
             handler(self)
+            self.socket.send(f"{self.session_id}::{command_to_send}".encode("ascii"))
 
 
 

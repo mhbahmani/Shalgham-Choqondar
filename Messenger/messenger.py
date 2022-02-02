@@ -5,7 +5,9 @@ from hashlib import sha256
 import threading
 import logging
 import socket
+import re
 
+BUFF_SIZE = 1024
 
 class MessengerServer:
     server: socket.socket
@@ -19,12 +21,15 @@ class MessengerServer:
         logging.info(f"MessengerServer is listening on {MessengerServer.HOST}:{MessengerServer.PORT}")
 
         self.users: list = []
+        self.clients_socket = {}
         self.end = False
 
     def signup(self):
+        print("signupppp")
         pass
 
     def login(self):
+        print("loginnnnn")
         pass
 
     def exit(self):
@@ -33,7 +38,9 @@ class MessengerServer:
     def handle_client(self, client: socket.socket, session_id: str):
         while not self.end:
             try:
-                command = input()
+                message = client.recv(BUFF_SIZE).decode("ascii")
+                regex_result = re.match("(?P<session_id>[\w|=]+)::(?P<command>.+)", message)
+                session_id, command = regex_result.groupdict().values()
                 handler = CommandHandler.parse(command)
                 handler(self)
             except AttributeError:

@@ -12,7 +12,7 @@ class Menu():
         for item in self.items:
             item: MenuItem
             if (match := item.regex.match(command)):
-                return item.handler
+                return item.handler, item.command_to_send
         return MenuItem.invalid_command
 
 
@@ -37,19 +37,20 @@ class MessengerMenu(Menu, metaclass=SingletonMeta):
     def __init__(self) -> None:
         from client import MessengerClient
         self.items = [
-            MenuItem(MessengerMenu.SIGNUP, re.compile("1"), MessengerClient.signup, self),
-            MenuItem(MessengerMenu.LOGIN, re.compile("2"), MessengerClient.login, self),
-            MenuItem(MessengerMenu.EXIT, re.compile("3"), MessengerClient.login, self)
+            MenuItem(MessengerMenu.SIGNUP, re.compile("1"), MessengerClient.signup, self, "signup"),
+            MenuItem(MessengerMenu.LOGIN, re.compile("2"), MessengerClient.login, self, "login"),
+            MenuItem(MessengerMenu.EXIT, re.compile("3"), MessengerClient.exit, self)
         ]
         super().__init__()
 
 
 class MenuItem:
-    def __init__(self, text: str, regex: str, handler, menu) -> None:
+    def __init__(self, text: str, regex: str, handler, menu, command_to_send: str = None) -> None:
         self.text = text
+        self.menu = menu
         self.regex = regex
         self.handler = handler
-        self.menu = menu
+        self.command_to_send = command_to_send
 
     def invalid_command(self):
         print("Invalid Command")
