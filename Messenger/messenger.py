@@ -1,18 +1,21 @@
+from models import ResponseEncoder
 from menus import CommandHandler
 
+from models import User, Response
 from hashlib import sha256
 
 import threading
 import logging
 import socket
-import re
+import json
+
 
 BUFF_SIZE = 1024
 
 class MessengerServer:
     server: socket.socket
     HOST: str = '127.0.0.1'
-    PORT: int = 8001
+    PORT: int = 8002
 
     def __init__(self) -> None:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -24,9 +27,17 @@ class MessengerServer:
         self.clients_socket = {}
         self.end = False
 
-    def signup(self):
-        print("signupppp")
-        pass
+    def signup(self, args):
+        try:
+            self.users.append(
+                User(
+                    username=User._is_valid_username(args[1], self.users),
+                    password=args[2]
+                )
+            )
+            return Response(201, "Signup Successful")
+        except ValueError as e:
+            return e
 
     def login(self):
         print("loginnnnn")
@@ -39,19 +50,23 @@ class MessengerServer:
         while not self.end:
             try:
                 message = client.recv(BUFF_SIZE).decode("ascii")
-                regex_result = re.match("(?P<session_id>[\w|=]+)::(?P<command>.+)", message)
-                session_id, command = regex_result.groupdict().values()
-                handler = CommandHandler.parse(command)
-                handler(self)
-            except AttributeError:
-                pass
+                handler, args = CommandHandler.parse(message)
+                args = list(args)
+                response: Response = handler(self, args)
+                self.send_response_to_client(client, response)
             except ValueError:
-                logging.error("Something bad happend")
+                self.send_message_to_client(client, response)
+                continue
+            except:
+                logging.log("Something went wrong")
                 client.close()
-                break    
+                break
 
-    def run_server(self):
-        pass
+    def send_message_to_client(self, client: socket.socket, message: str):
+        client.send(message.encode("ascii"))
+
+    def send_response_to_client(self, client: socket.socket, response: Response):
+        client.send(json.dumps(response, indent=4, cls=ResponseEncoder).encode("ascii"))
 
     def server_listener(self):
         while not self.end:

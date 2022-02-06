@@ -1,3 +1,6 @@
+import json
+from types import SimpleNamespace
+from models import Response
 from menus import MainMenu, MessengerMenu
 
 from passlib.hash import bcrypt
@@ -10,14 +13,14 @@ import re
 class Client:
     hasher = bcrypt.using(rounds=13)
     MESSENGER_SERVER_IP = "127.0.0.1"
-    MESSENGER_SERVER_PORT = 8001
+    MESSENGER_SERVER_PORT = 8002
 
     STREAM_SERVER_IP = "127.0.0.1"
     STREAM_SERVER_PORT = 8002
 
-    def __init__(self, password: str) -> None:
+    def __init__(self, admin_password: str) -> None:
         self.client: socket.Socket
-        self.password = password
+        self.admin_password = admin_password
 
     def main_menu_handler(self):
         MainMenu().show()
@@ -40,8 +43,8 @@ class Client:
         print(self.session_id)
 
     def login_as_admin(self):
-        while not Client.hasher.verify(getpass(), self.password):
-            print("Wrong Password")
+        while not Client.hasher.verify(getpass(), self.admin_password):
+            print("Wrong admin_Password")
         self.firewall_menu_handler()
 
     def connect_to_ext_servers(self):
@@ -68,9 +71,21 @@ class MessengerClient:
     def __init__(self, socket, session_id) -> None:
         self.socket = socket
         self.session_id = session_id
-        
+
     def signup(self) -> None:
-        pass
+        while True:
+            username = input("Please enter your username: ")
+            password = getpass("Please enter your password: ")
+            password_confirmation = getpass("Please enter your password again: ")
+            if password != password_confirmation:
+                print("Passwords do not match")
+                continue
+            self.send_to_server(MessengerMenu.SIGNUP, [username, password])
+            response = self.get_response()
+            if response.status_code != 201:
+                print(response.message)
+                continue
+            break
 
     def login(self) -> None:
         pass
@@ -82,18 +97,23 @@ class MessengerClient:
         MessengerMenu().show()
         while True:
             command = input()
-            handler, command_to_send = MessengerMenu().parse(command)
+            handler, _ = MessengerMenu().parse(command)
             handler(self)
-            self.socket.send(f"{self.session_id}::{command_to_send}".encode("ascii"))
 
+    def send_to_server(self, command: str, args: list):
+        self.socket.send(f"{self.session_id}::{command}::{'|,|'.join(args)}".encode("ascii"))
+
+    def get_response(self) -> Response:
+        res: str = self.socket.recv(1024).decode("ascii")
+        return json.loads(res, object_hook=lambda d: SimpleNamespace(**d))
 
 
 if __name__ == "__main__":
-    # password = getpass("Set an admin password: ")
-    password = "hello"
+    admin_password = getpass("Set an admin password: ")
+    # admin_password = "hello"
 
     client = Client(
-        Client.hasher.hash(password)
+        admin_password=Client.hasher.hash(admin_password)
     )
-    # client.main_menu_handler()
-    client.connect_to_ext_servers()
+    client.main_menu_handler()
+    # client.connect_to_ext_servers()
