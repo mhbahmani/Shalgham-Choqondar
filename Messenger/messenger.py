@@ -37,11 +37,9 @@ class MessengerServer:
                 username=User._is_valid_username(args[1], self.users),
                 password=MessengerServer.hasher.hash(args[2])
             )
+            for other_user in self.users:
+                new_user.add_new_chatroom(other_user)
             self.users.append(new_user)
-            for user in self.users:
-                new_chatroom = ChatRoom([user, new_user])
-                new_user.chat_rooms.append(new_chatroom)
-                user.chat_rooms.append(new_chatroom)
             return Response(201, "Signup Successful")
         except ValueError as e:
             return e
@@ -54,7 +52,7 @@ class MessengerServer:
                     client_session_id = binascii.hexlify(os.urandom(20)).decode()
                     self.clients_socket[client_session_id] = client
                     self.online_users[client_session_id] = user
-                    return Response(200, "Login Successful", {"session_id": client_session_id})
+                    return Response(200, "Login Successful", {"session_id": client_session_id, "chatrooms": user.get_chatrooms()})
             return Response(401, "Incorrect username or password")
         except Exception as e:
             logging.log(e)
@@ -71,8 +69,8 @@ class MessengerServer:
                 args = list(args)
                 response: Response = handler(self, args, client)
                 self.send_response_to_client(client, response)
-            except ValueError:
-                self.send_message_to_client(client, response)
+            except ValueError as e:
+                self.send_message_to_client(client, e.__str__())
                 continue
             except:
                 logging.info("Something went wrong")

@@ -72,6 +72,7 @@ class MessengerClient:
     def __init__(self, socket, session_id) -> None:
         self.socket = socket
         self.session_id = session_id
+        self.chatrooms = []
 
     def signup(self) -> None:
         while True:
@@ -96,13 +97,24 @@ class MessengerClient:
         if response.status_code != 200:
             print(response.message)
         self.session_id = response.data.session_id
+        self.chatrooms = response.data.chatrooms
+        self.messenger()
+
+    def messenger(self):
+        self.show_chatrooms()
+        while True:
+            username = input()
+            if self.chatrooms.get(username):
+                # TODO: open chatroom
+                pass
+            else: break
 
     def exit(self) -> None:
         pass
 
     def handle(self) -> None:
-        MessengerMenu().show()
         while True:
+            MessengerMenu().show()
             command = input()
             handler, _ = MessengerMenu().parse(command)
             handler(self)
@@ -113,6 +125,10 @@ class MessengerClient:
     def get_response(self) -> Response:
         res: str = self.socket.recv(1024).decode("ascii")
         return json.loads(res, object_hook=lambda d: SimpleNamespace(**d))
+
+    def show_chatrooms(self):
+        for username in self.chatrooms:
+            print(username, f"({self.chatrooms[username]})")
 
 
 if __name__ == "__main__":
