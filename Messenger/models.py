@@ -13,6 +13,7 @@ class User:
                 raise ValueError("Duplicate Username")
         return username
 
+
 class ChatRoom:
     def __init__(self, contact) -> None:
         self.contact: User = contact
@@ -30,6 +31,7 @@ class Response:
         self.status_code = status_code
         self.message = message
 
+
 class ResponseEncoder(JSONEncoder):
-        def default(self, o):
-            return o.__dict__
+    def default(self, o):
+        return o.__dict__
