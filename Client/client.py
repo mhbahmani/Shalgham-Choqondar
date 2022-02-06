@@ -5,12 +5,15 @@ from menus import MainMenu, MessengerMenu
 from passlib.hash import bcrypt
 from getpass import getpass
 
+import pickle
+
 import threading
 import socket
 import json
 import time
 import re
 
+STREAMING_FINISH = "STREAMING_FINISH"
 
 class Client:
     hasher = bcrypt.using(rounds=13)
@@ -19,6 +22,10 @@ class Client:
 
     STREAM_SERVER_IP = "127.0.0.1"
     STREAM_SERVER_PORT = 8002
+
+    UDP_PORT = 8003
+
+    BUFFER_SIZE = 100000000
 
     def __init__(self, admin_password: str) -> None:
         self.client: socket.Socket
@@ -42,8 +49,28 @@ class Client:
         messenger_client.handle()
 
     def stream(self, proxy_port: int):
-        self.connect(Client.STREAM_SERVER_IP, Client.STREAM_SERVER_PORT)
-        print(self.session_id)
+        udp_client, _ = self.make_udp_connection()
+        udp_client.connect((self.STREAM_SERVER_IP, self.UDP_PORT))
+        while True:
+            print(udp_client)
+            x = udp_client.recvfrom(Client.BUFFER_SIZE)
+            data = x[0]
+            print(data)
+            if len(data) < 100:
+                if data.decode('utf-8') == STREAMING_FINISH:
+                    self.send_message(STREAMING_FINISH)
+                    break
+            data = pickle.loads(data)
+            data = cv2.imdecode(data, cv2.IMREAD_COLOR)
+            cv2.imshow('Video Streamer (client-side)', data)
+            print(data)
+            if cv2.waitKey(10) == 13:  # Press Enter then window will close
+                self.send_message(STREAMING_FINISH)
+                break
+        cv2.destroyAllWindows()
+
+    def send_message(self: "Client", message: str):
+        self.udp_client.send(message.encode('ascii'))
 
     def login_as_admin(self):
         while not Client.hasher.verify(getpass(), self.admin_password):
@@ -69,6 +96,19 @@ class Client:
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((address, port))
         self.session_id = self.client.recv(1024).decode('ascii')
+
+    def connect_udp(self, address, port):
+        self.udp_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.udp_client.connect((address, port))
+        return self.udp_client
+
+    def make_udp_connection(self):
+        udp_server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_server.bind((Client.STREAM_SERVER_IP, Client.UDP_PORT))
+        port = udp_server.getsockname()[1]
+        # send_message(self, UDP_PORT_INFO_MESSAGE + ' ' + str(port))
+        return udp_server, port
+
 
 
 class MessengerClient:
@@ -113,7 +153,7 @@ class MessengerClient:
                 if response.status_code != 200:
                     print(response.message)
                 self.handle_chatroom(response.data["chatroom"], username)
-    
+
     def handle_chatroom(self, messages: str, contact: str):
         print("------------------------------")
         print(messages)
@@ -123,7 +163,7 @@ class MessengerClient:
         write_thread = threading.Thread(target=self.handle_write, args=(contact,))
         write_thread.start()
         write_thread.join()
-        
+
     def exit(self) -> None:
         pass
 
@@ -144,7 +184,7 @@ class MessengerClient:
                     continue
             except:
                 break
-        
+
     def handle_read(self, contact: str):
         while True:
             try:
