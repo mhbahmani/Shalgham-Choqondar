@@ -33,10 +33,13 @@ class ChatRoom:
         self.unreaded_messages: list = []
         self.num_unreed_messages = 0
 
-    def get_messages(self):
+    def get_messages(self, num_messages: int = -1):
+        if num_messages != -1:
+            msgs = self.messages[-num_messages:]
+        else: msgs = self.messages
         self.num_unreed_messages = 0
         self.unreaded_messages.clear()
-        return "\n".join([f"{'' if msg.sender == self.user else f'{msg.sender.username}) '}{msg.text}" for msg in self.messages])
+        return "\n".join([f"{'' if msg.sender == self.user else f'{msg.sender.username}) '}{msg.text}" for msg in msgs])
 
     def add_message(self, text: str) -> None:
         message = Message(self.user, text)

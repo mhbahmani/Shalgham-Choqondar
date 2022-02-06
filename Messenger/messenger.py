@@ -91,6 +91,19 @@ class MessengerServer:
         except Exception as e:
             logging.info(e)
 
+    def get_chatrooms(self, args, client: socket.socket):
+        session_id = args[0]
+        user = self.online_users.get(session_id)
+        if not user: return Response(401, "You are not logged in")
+        return Response(200, "Login Successful", {"chatrooms": user.get_chatrooms()})
+
+    def get_x_last_messages(self, args, client):
+        session_id, contact_username, num_messages = args[0], args[1], int(args[2])
+        user = self.online_users.get(session_id)
+        if not user: return Response(401, "You are not logged in")
+        chatroom: ChatRoom = user.chatrooms.get(contact_username)
+        if not chatroom: return Response(401, "Chatroom not found")
+        return Response(200, "Messages Fetched", {"messages": chatroom.get_messages(num_messages)})
     def exit(self):
         pass
 

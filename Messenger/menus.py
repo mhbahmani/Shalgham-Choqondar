@@ -10,6 +10,8 @@ class CommandHandler(metaclass=SingletonMeta):
     OPEN_CHATROOM = "OpenChatroom"
     SEND_MESSAGE = "SendMessage"
     UPDATE_CHATROOM = "UpdateChatroom"
+    UPDATE_CHATROOMS_LIST = "GetChatrooms"
+    GET_X_LAST_MESSAGES = "GetXLastMessages"
 
 
     def __init__(self) -> None:
@@ -34,7 +36,15 @@ class CommandHandler(metaclass=SingletonMeta):
             Command(
                 CommandHandler.UPDATE_CHATROOM,
                 re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.UPDATE_CHATROOM}::(?P<contact>\w+)"),
-                MessengerServer.update_chatroom, self)
+                MessengerServer.update_chatroom, self),
+            Command(
+                CommandHandler.UPDATE_CHATROOMS_LIST,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.UPDATE_CHATROOMS_LIST}"),
+                MessengerServer.get_chatrooms, self),
+            Command(
+                CommandHandler.GET_X_LAST_MESSAGES,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.GET_X_LAST_MESSAGES}::(?P<contact>\w+)\|,\|(?P<num_messages>\d+)"),
+                MessengerServer.get_x_last_messages, self)
         ]
 
 

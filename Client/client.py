@@ -76,6 +76,7 @@ class MessengerClient:
         self.socket = socket
         self.session_id = session_id
         self.chatrooms: dict
+        self.close_chatroom = False
 
     def signup(self) -> None:
         while True:
@@ -104,8 +105,8 @@ class MessengerClient:
         self.messenger()
 
     def messenger(self):
-        self.show_chatrooms()
         while True:
+            self.show_chatrooms()
             username = input()
             if self.chatrooms.get(username) != None:
                 self.send_to_server(ChatroomMenu.OPEN_CHATROOM, [username])
@@ -113,6 +114,9 @@ class MessengerClient:
                 if response.status_code != 200:
                     print(response.message)
                 self.handle_chatroom(response.data["chatroom"], username)
+
+            self.close_chatroom = False
+            self.update_chatrooms_list()
     
     def handle_chatroom(self, messages: str, contact: str):
         print("------------------------------")
@@ -135,18 +139,28 @@ class MessengerClient:
             handler(self)
 
     def handle_write(self, contact: str):
-        while True:
-            try:
+        while not self.close_chatroom:
+            # try:
                 message = input()
-                self.send_to_server(ChatroomMenu.SEND_MESSAGE, [contact, message])
-                response = self.get_response()
+                if message.startswith("/"):
+                    if message == "/exit":
+                        self.close_chatroom = True
+                        break
+                    elif (match := re.match("/load (?P<x>\d+)", message)):
+                        x = match.groupdict()["x"]
+                        self.send_to_server(ChatroomMenu.GET_X_LAST_MESSAGES, [contact, x])
+                        response = self.get_response()
+                        print(response.data["messages"])
+                else: 
+                    self.send_to_server(ChatroomMenu.SEND_MESSAGE, [contact, message])
+                    response = self.get_response()
                 if response.status_code != 200:
                     continue
-            except:
-                break
+            # except:
+            #     break
         
     def handle_read(self, contact: str):
-        while True:
+        while not self.close_chatroom:
             try:
                 time.sleep(5)
                 self.send_to_server(ChatroomMenu.UPDATE_CHATROOM, [contact])
@@ -166,6 +180,13 @@ class MessengerClient:
     def get_response(self) -> Response:
         res: str = self.socket.recv(1024).decode("ascii")
         return json.loads(res, object_hook=ResponseDecoder.decode)
+
+    def update_chatrooms_list(self):
+        self.send_to_server(ChatroomMenu.UPDATE_CHATROOMS_LIST, [])
+        response = self.get_response()
+        if response.status_code != 200:
+            print(response.message)
+        self.chatrooms = response.data["chatrooms"]
 
     def show_chatrooms(self):
         for username in self.chatrooms:
