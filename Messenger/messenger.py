@@ -1,6 +1,5 @@
-from models import ResponseEncoder
+from models import ResponseEncoder, ChatRoom, User, Response
 from menus import CommandHandler
-from models import User, Response
 
 from hashlib import sha256
 from passlib.hash import bcrypt
@@ -34,12 +33,15 @@ class MessengerServer:
 
     def signup(self, args, client: socket.socket = None):
         try:
-            self.users.append(
-                User(
-                    username=User._is_valid_username(args[1], self.users),
-                    password=MessengerServer.hasher.hash(args[2])
-                )
+            new_user =  User(
+                username=User._is_valid_username(args[1], self.users),
+                password=MessengerServer.hasher.hash(args[2])
             )
+            self.users.append(new_user)
+            for user in self.users:
+                new_chatroom = ChatRoom([user, new_user])
+                new_user.chat_rooms.append(new_chatroom)
+                user.chat_rooms.append(new_chatroom)
             return Response(201, "Signup Successful")
         except ValueError as e:
             return e

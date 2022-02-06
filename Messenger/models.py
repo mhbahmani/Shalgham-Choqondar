@@ -14,8 +14,8 @@ class User:
         return username
 
 class ChatRoom:
-    def __init__(self, contact) -> None:
-        self.contact: User = contact
+    def __init__(self, users: list) -> None:
+        self.users: list = users
         self.messages: list = []
 
 
