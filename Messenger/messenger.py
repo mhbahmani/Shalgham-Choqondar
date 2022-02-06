@@ -6,9 +6,11 @@ from hashlib import sha256
 from passlib.hash import bcrypt
 
 import threading
+import binascii
 import logging
 import socket
 import json
+import os
 
 
 BUFF_SIZE = 1024
@@ -25,11 +27,12 @@ class MessengerServer:
         self.server.listen(1)
         logging.info(f"MessengerServer is listening on {MessengerServer.HOST}:{MessengerServer.PORT}")
 
-        self.users: list = []
+        self.users = []
+        self.online_users = {}
         self.clients_socket = {}
         self.end = False
 
-    def signup(self, args):
+    def signup(self, args, client: socket.socket = None):
         try:
             self.users.append(
                 User(
@@ -41,15 +44,16 @@ class MessengerServer:
         except ValueError as e:
             return e
 
-    def login(self, args):
+    def login(self, args, client: socket.socket):
         try:
-            username = args[1]
-            password_hash = args[2]
+            username, password_hash = args[1], args[2]
             for user in self.users:
                 if user.username == username and MessengerServer.hasher.verify(password_hash, user.password):
-                    #TODO: update session_id
-                    return Response(200, "Login Successful")
-            return Response(401, "Login Failed")
+                    client_session_id = binascii.hexlify(os.urandom(20)).decode()
+                    self.clients_socket[client_session_id] = client
+                    self.online_users[client_session_id] = user
+                    return Response(200, "Login Successful", {"session_id": client_session_id})
+            return Response(401, "Incorrect username or password")
         except Exception as e:
             logging.log(e)
             
@@ -63,13 +67,13 @@ class MessengerServer:
                 message = client.recv(BUFF_SIZE).decode("ascii")
                 handler, args = CommandHandler.parse(message)
                 args = list(args)
-                response: Response = handler(self, args)
+                response: Response = handler(self, args, client)
                 self.send_response_to_client(client, response)
             except ValueError:
                 self.send_message_to_client(client, response)
                 continue
             except:
-                logging.log("Something went wrong")
+                logging.info("Something went wrong")
                 client.close()
                 break
 

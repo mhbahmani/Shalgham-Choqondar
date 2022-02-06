@@ -20,6 +20,7 @@ class Client:
 
     def __init__(self, admin_password: str) -> None:
         self.client: socket.Socket
+        self.session_id: str
         self.admin_password = admin_password
 
     def main_menu_handler(self):
@@ -88,15 +89,13 @@ class MessengerClient:
             break
 
     def login(self) -> None:
-        while True:
-            username = input("Please enter your username: ")
-            password = getpass("Please enter your password: ")
-            self.send_to_server(MessengerMenu.LOGIN, [username, password])
-            response = self.get_response()
-            if response.status_code != 200:
-                print(response.message)
-                continue
-            break
+        username = input("Please enter your username: ")
+        password = getpass("Please enter your password: ")
+        self.send_to_server(MessengerMenu.LOGIN, [username, password])
+        response = self.get_response()
+        if response.status_code != 200:
+            print(response.message)
+        self.session_id = response.data.session_id
 
     def exit(self) -> None:
         pass

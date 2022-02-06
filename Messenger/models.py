@@ -26,8 +26,9 @@ class Message:
 
 
 class Response:
-    def __init__(self, status_code: int, message: str) -> None:
+    def __init__(self, status_code: int, message: str, data: dict = {}) -> None:
         self.status_code = status_code
+        self.data = data
         self.message = message
 
 class ResponseEncoder(JSONEncoder):
