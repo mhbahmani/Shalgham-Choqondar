@@ -1,8 +1,9 @@
 from models import ResponseEncoder
 from menus import CommandHandler
-
 from models import User, Response
+
 from hashlib import sha256
+from passlib.hash import bcrypt
 
 import threading
 import logging
@@ -13,6 +14,7 @@ import json
 BUFF_SIZE = 1024
 
 class MessengerServer:
+    hasher = bcrypt.using(rounds=13)
     server: socket.socket
     HOST: str = '127.0.0.1'
     PORT: int = 8002
@@ -32,16 +34,25 @@ class MessengerServer:
             self.users.append(
                 User(
                     username=User._is_valid_username(args[1], self.users),
-                    password=args[2]
+                    password=MessengerServer.hasher.hash(args[2])
                 )
             )
             return Response(201, "Signup Successful")
         except ValueError as e:
             return e
 
-    def login(self):
-        print("loginnnnn")
-        pass
+    def login(self, args):
+        try:
+            username = args[1]
+            password_hash = args[2]
+            for user in self.users:
+                if user.username == username and MessengerServer.hasher.verify(password_hash, user.password):
+                    #TODO: update session_id
+                    return Response(200, "Login Successful")
+            return Response(401, "Login Failed")
+        except Exception as e:
+            logging.log(e)
+            
 
     def exit(self):
         pass

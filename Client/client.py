@@ -88,7 +88,15 @@ class MessengerClient:
             break
 
     def login(self) -> None:
-        pass
+        while True:
+            username = input("Please enter your username: ")
+            password = getpass("Please enter your password: ")
+            self.send_to_server(MessengerMenu.LOGIN, [username, password])
+            response = self.get_response()
+            if response.status_code != 200:
+                print(response.message)
+                continue
+            break
 
     def exit(self) -> None:
         pass
@@ -109,11 +117,11 @@ class MessengerClient:
 
 
 if __name__ == "__main__":
-    admin_password = getpass("Set an admin password: ")
-    # admin_password = "hello"
+    # admin_password = getpass("Set an admin password: ")
+    admin_password = "hello"
 
     client = Client(
         admin_password=Client.hasher.hash(admin_password)
     )
-    client.main_menu_handler()
-    # client.connect_to_ext_servers()
+    # client.main_menu_handler()
+    client.connect_to_ext_servers()
