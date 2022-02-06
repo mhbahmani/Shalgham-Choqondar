@@ -6,6 +6,7 @@ import threading
 import logging
 import socket
 import re
+import cv2
 
 BUFF_SIZE = 1024
 
@@ -14,30 +15,56 @@ class StreamerServer:
     HOST: str = '127.0.0.1'
     PORT: int = 8002
 
+    FINISH_STREAMING = "FINISH_STREAMING"
+
     def __init__(self) -> None:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server.bind((MessengerServer.HOST, MessengerServer.PORT))
+        self.server.bind((StreamerServer.HOST, StreamerServer.PORT))
         self.server.listen(1)
-        logging.info(f"StreamerServer is listening on {MessengerServer.HOST}:{MessengerServer.PORT}")
+        logging.info(f"StreamerServer is listening on {StreamerServer.HOST}:{StreamerServer.PORT}")
 
         self.users: list = []
         self.clients_socket = {}
         self.end = False
 
+    @staticmethod
+    def stream_video(udp_socket: socket.socket, udp_port: int, video_delay: float, video_path: str, b: bool):
+        cap = cv2.VideoCapture(video_path)
+        while cap.isOpened():
+            if not True:
+                break
+            try:
+                ret, photo = cap.read()
+                # cv2.imshow('Video Streamer', photo)
+                ret, buffer = cv2.imencode(".jpg", photo, [int(cv2.IMWRITE_JPEG_QUALITY), 30])
+                x_as_bytes = pickle.dumps(buffer)
+                udp_socket.sendto(x_as_bytes, (localhost, udp_port))
+                sleep(video_delay)
+            except Exception as e:
+                byte_message = bytes(UDP_STREAMING_FINISH, "utf-8")
+                for i in range(500):
+                    udp_socket.sendto(byte_message, (localhost, udp_port))
+                udp_socket.close()
+
+                break
+
+        # cv2.destroyAllWindows()
+        cap.release()
+
     def handle_client(self, client: socket.socket, session_id: str):
         while not self.end:
             try:
                 message = client.recv(BUFF_SIZE).decode("ascii")
-                regex_result = re.match("(?P<session_id>[\w|=]+)::(?P<command>.+)", message)
-                session_id, command = regex_result.groupdict().values()
-                handler = CommandHandler.parse(command)
-                handler(self)
+                if message == StreamerServer.FINISH_STREAMING:
+                    self.end = True
+                    break
             except AttributeError:
                 pass
             except ValueError:
                 logging.error("Something bad happend")
                 client.close()
-                break    
+                break
+        client.close()    
 
     def run_server(self):
         pass
@@ -56,6 +83,7 @@ class StreamerServer:
                 break
 
 
+
 if __name__ == "__main__":
     logging.basicConfig(
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -64,6 +92,11 @@ if __name__ == "__main__":
             'DEBUG': logging.DEBUG,
             'ERROR': logging.ERROR,
             }['INFO'])
-    server = MessengerServer()
-    server.server_listener()
-    server.server.close()
+    ss = StreamerServer()
+    ss.server_listener()
+    StreamerServer.stream_video(udp_socket=ss.server, 
+                                udp_port=StreamerServer.PORT, 
+                                video_delay=1, 
+                                video_path='videos/sare_keyfi_aziz.mp4', 
+                                b=False)
+        

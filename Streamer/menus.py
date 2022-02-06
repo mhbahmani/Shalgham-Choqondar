@@ -18,7 +18,6 @@ class CommandHandler(metaclass=SingletonMeta):
                 MessengerServer.login, self)
         ]
 
-
     def show(self):
         for i, item in enumerate(CommandHandler().items):
             print(f"{i + 1}. {item.text}")
