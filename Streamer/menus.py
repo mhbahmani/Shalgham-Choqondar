@@ -4,22 +4,19 @@ import re
 
 
 class CommandHandler(metaclass=SingletonMeta):
-    SIGNUP = "Signup"
-    LOGIN = "Login"
+    SIGNUP = "signup"
+    LOGIN = "login"
 
     def __init__(self) -> None:
         from messenger import MessengerServer
         self.commands = [
             Command(
-                CommandHandler.SIGNUP,
-                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.SIGNUP}::(?P<username>\w+)\|,\|(?P<password>\w+)"), 
+                CommandHandler.SIGNUP, re.compile(f"{CommandHandler.SIGNUP}"),
                 MessengerServer.signup, self),
             Command(
-                CommandHandler.LOGIN,
-                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.LOGIN}::(?P<username>\w+)\|,\|(?P<password>\w+)"),
+                CommandHandler.LOGIN, re.compile(f"{CommandHandler.LOGIN}"),
                 MessengerServer.login, self)
         ]
-
 
     def show(self):
         for i, item in enumerate(CommandHandler().items):
@@ -29,7 +26,7 @@ class CommandHandler(metaclass=SingletonMeta):
         for item in CommandHandler().commands:
             item: Command
             if (match := item.regex.match(command)):
-                return item.handler, match.groupdict().values()
+                return item.handler
         return Command.invalid_command
 
 
