@@ -45,18 +45,18 @@ class MessengerServer:
             return e
 
     def login(self, args, client: socket.socket):
-        try:
-            username, password_hash = args[1], args[2]
-            for user in self.users:
-                if user.username == username and MessengerServer.hasher.verify(password_hash, user.password):
-                    client_session_id = binascii.hexlify(os.urandom(20)).decode()
-                    self.clients_socket[client_session_id] = client
-                    self.online_users[client_session_id] = user
-                    return Response(200, "Login Successful", {"session_id": client_session_id, "chatrooms": user.get_chatrooms()})
-            return Response(401, "Incorrect username or password")
-        except Exception as e:
-            logging.log(e)
-            
+        # try:
+        username, password_hash = args[1], args[2]
+        for user in self.users:
+            if user.username == username and MessengerServer.hasher.verify(password_hash, user.password):
+                client_session_id = binascii.hexlify(os.urandom(20)).decode()
+                self.clients_socket[client_session_id] = client
+                self.online_users[client_session_id] = user
+                return Response(200, "Login Successful", {"session_id": client_session_id, "chatrooms": user.get_chatrooms()})
+        return Response(401, "Incorrect username or password")
+        # except Exception as e:
+        #     logging.log(e)
+
 
     def exit(self):
         pass
@@ -72,10 +72,10 @@ class MessengerServer:
             except ValueError as e:
                 self.send_message_to_client(client, e.__str__())
                 continue
-            except:
-                logging.info("Something went wrong")
-                client.close()
-                break
+            # except:
+            #     logging.info("Something went wrong")
+            #     client.close()
+            #     break
 
     def send_message_to_client(self, client: socket.socket, message: str):
         client.send(message.encode("ascii"))
@@ -113,5 +113,7 @@ if __name__ == "__main__":
             'ERROR': logging.ERROR,
             }['INFO'])
     server = MessengerServer()
+    server.signup(["signup", "a", "a"])
+    server.signup(["signup", "aa", "aa"])
     server.server_listener()
     server.server.close()

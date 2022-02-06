@@ -1,6 +1,5 @@
 import json
-from types import SimpleNamespace
-from models import Response
+from models import Response, ResponseDecoder
 from menus import MainMenu, MessengerMenu
 
 from passlib.hash import bcrypt
@@ -50,13 +49,14 @@ class Client:
 
     def connect_to_ext_servers(self):
         while True:
-            user_input = input()
+            user_input = "Shalgham"
+            # user_input = input()
             match = re.match("(?P<server>(Shalgham|Choghondar))( via (?P<port>\d+))?", user_input)
             if not match:
                 print("Invalid Server name")
                 continue
             break
-            
+
         server, port = match.groupdict()["server"], match.groupdict().get("port")
         if port: port = int(port)
         if server == "Shalgham": self.messenger(port)
@@ -72,7 +72,7 @@ class MessengerClient:
     def __init__(self, socket, session_id) -> None:
         self.socket = socket
         self.session_id = session_id
-        self.chatrooms = []
+        self.chatrooms: dict
 
     def signup(self) -> None:
         while True:
@@ -96,8 +96,8 @@ class MessengerClient:
         response = self.get_response()
         if response.status_code != 200:
             print(response.message)
-        self.session_id = response.data.session_id
-        self.chatrooms = response.data.chatrooms
+        self.session_id = response.data["session_id"]
+        self.chatrooms = response.data["chatrooms"]
         self.messenger()
 
     def messenger(self):
@@ -124,11 +124,11 @@ class MessengerClient:
 
     def get_response(self) -> Response:
         res: str = self.socket.recv(1024).decode("ascii")
-        return json.loads(res, object_hook=lambda d: SimpleNamespace(**d))
+        return json.loads(res, object_hook=ResponseDecoder.decode)
 
     def show_chatrooms(self):
         for username in self.chatrooms:
-            print(username, f"({self.chatrooms[username]})")
+            print(username, f"{f'({self.chatrooms[username]})' if self.chatrooms[username] else ''}")
 
 
 if __name__ == "__main__":
