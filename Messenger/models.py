@@ -30,7 +30,24 @@ class ChatRoom:
         self.user: User = user
         self.contact: User = contact
         self.messages: list = []
+        self.unreaded_messages: list = []
         self.num_unreed_messages = 0
+
+    def get_messages(self):
+        self.num_unreed_messages = 0
+        self.unreaded_messages.clear()
+        return "\n".join([f"{'' if msg.sender == self.user else f'{msg.sender.username}) '}{msg.text}" for msg in self.messages])
+
+    def add_message(self, text: str) -> None:
+        message = Message(self.user, text)
+        self.messages.append(message)
+        self.contact.chatrooms[self.user.username].messages.append(message)
+        self.contact.chatrooms[self.user.username].unreaded_messages.append(message)
+
+    def get_unread_messages(self):
+        msgs = self.unreaded_messages.copy()
+        self.unreaded_messages.clear()
+        return "\n".join([f"{'' if msg.sender == self.user else f'{msg.sender.username}) '}{msg.text}" for msg in msgs])
 
 class Message:
     def __init__(self, user: User, text: str) -> None:

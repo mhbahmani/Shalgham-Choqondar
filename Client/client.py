@@ -1,11 +1,14 @@
-import json
+from menus import ChatroomMenu
 from models import Response, ResponseDecoder
 from menus import MainMenu, MessengerMenu
 
 from passlib.hash import bcrypt
 from getpass import getpass
 
+import threading
 import socket
+import json
+import time
 import re
 
 
@@ -104,11 +107,23 @@ class MessengerClient:
         self.show_chatrooms()
         while True:
             username = input()
-            if self.chatrooms.get(username):
-                # TODO: open chatroom
-                pass
-            else: break
+            if self.chatrooms.get(username) != None:
+                self.send_to_server(ChatroomMenu.OPEN_CHATROOM, [username])
+                response = self.get_response()
+                if response.status_code != 200:
+                    print(response.message)
+                self.handle_chatroom(response.data["chatroom"], username)
+    
+    def handle_chatroom(self, messages: str, contact: str):
+        print("------------------------------")
+        print(messages)
+        read_thread = threading.Thread(target=self.handle_read, args=(contact,))
+        read_thread.start()
 
+        write_thread = threading.Thread(target=self.handle_write, args=(contact,))
+        write_thread.start()
+        write_thread.join()
+        
     def exit(self) -> None:
         pass
 
@@ -118,6 +133,32 @@ class MessengerClient:
             command = input()
             handler, _ = MessengerMenu().parse(command)
             handler(self)
+
+    def handle_write(self, contact: str):
+        while True:
+            try:
+                message = input()
+                self.send_to_server(ChatroomMenu.SEND_MESSAGE, [contact, message])
+                response = self.get_response()
+                if response.status_code != 200:
+                    continue
+            except:
+                break
+        
+    def handle_read(self, contact: str):
+        while True:
+            try:
+                time.sleep(5)
+                self.send_to_server(ChatroomMenu.UPDATE_CHATROOM, [contact])
+                response = self.get_response()
+                if response.status_code != 200:
+                    print(response.message)
+                    continue
+                if len(response.data["chatroom"]) != 0:
+                    print(response.data["chatroom"])
+            except:
+                print("read thread is dead")
+                break
 
     def send_to_server(self, command: str, args: list):
         self.socket.send(f"{self.session_id}::{command}::{'|,|'.join(args)}".encode("ascii"))

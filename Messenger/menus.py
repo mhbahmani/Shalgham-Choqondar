@@ -7,6 +7,11 @@ class CommandHandler(metaclass=SingletonMeta):
     SIGNUP = "Signup"
     LOGIN = "Login"
 
+    OPEN_CHATROOM = "OpenChatroom"
+    SEND_MESSAGE = "SendMessage"
+    UPDATE_CHATROOM = "UpdateChatroom"
+
+
     def __init__(self) -> None:
         from messenger import MessengerServer
         self.commands = [
@@ -17,7 +22,19 @@ class CommandHandler(metaclass=SingletonMeta):
             Command(
                 CommandHandler.LOGIN,
                 re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.LOGIN}::(?P<username>\w+)\|,\|(?P<password>\w+)"),
-                MessengerServer.login, self)
+                MessengerServer.login, self),
+            Command(
+                CommandHandler.OPEN_CHATROOM,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.OPEN_CHATROOM}::(?P<username>\w+)"),
+                MessengerServer.open_chatroom, self),
+            Command(
+                CommandHandler.SEND_MESSAGE,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.SEND_MESSAGE}::(?P<contact>\w+)\|,\|(?P<message>.+)"),
+                MessengerServer.send_message, self),
+            Command(
+                CommandHandler.UPDATE_CHATROOM,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.UPDATE_CHATROOM}::(?P<contact>\w+)"),
+                MessengerServer.update_chatroom, self)
         ]
 
 

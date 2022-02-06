@@ -57,6 +57,39 @@ class MessengerServer:
         # except Exception as e:
         #     logging.log(e)
 
+    def open_chatroom(self, args, client: socket.socket):
+        try:
+            session_id, contact_username = args[0], args[1]
+            user = self.online_users.get(session_id)
+            if not user: return Response(401, "You are not logged in")
+            chatroom: ChatRoom = user.chatrooms.get(contact_username)
+            if not chatroom: return Response(401, "Chatroom not found")
+            return Response(200, "Chatroom opened", {"chatroom": chatroom.get_messages()})
+        except Exception as e:
+            logging.info(e)
+
+    def send_message(self, args, client: socket.socket):
+        try:
+            session_id, contact_username, message = args[0], args[1], args[2]
+            user = self.online_users.get(session_id)
+            if not user: return Response(401, "You are not logged in")
+            chatroom: ChatRoom = user.chatrooms.get(contact_username)
+            if not chatroom: return Response(401, "Chatroom not found")
+            chatroom.add_message(message)
+            return Response(200, "Message sent")
+        except Exception as e:
+            logging.info(e)
+
+    def update_chatroom(self, args, client: socket.socket):
+        try:
+            session_id, contact_username = args[0], args[1]
+            user = self.online_users.get(session_id)
+            if not user: return Response(401, "You are not logged in")
+            chatroom: ChatRoom = user.chatrooms.get(contact_username)
+            if not chatroom: return Response(401, "Chatroom not found")
+            return Response(200, "Chatroom Updated", {"chatroom": chatroom.get_unread_messages()})
+        except Exception as e:
+            logging.info(e)
 
     def exit(self):
         pass
@@ -115,5 +148,6 @@ if __name__ == "__main__":
     server = MessengerServer()
     server.signup(["signup", "a", "a"])
     server.signup(["signup", "aa", "aa"])
+    server.signup(["signup", "aaa", "aaa"])
     server.server_listener()
     server.server.close()
