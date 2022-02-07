@@ -18,7 +18,7 @@ class MessengerServer:
     hasher = bcrypt.using(rounds=13)
     server: socket.socket
     HOST: str = '127.0.0.1'
-    PORT: int = 8002
+    PORT: int = 8001
 
     def __init__(self) -> None:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -42,7 +42,7 @@ class MessengerServer:
             self.users.append(new_user)
             return Response(201, "Signup Successful")
         except ValueError as e:
-            return e
+            return Response(400, "Username is not available")
 
     def login(self, args, client: socket.socket):
         # try:
