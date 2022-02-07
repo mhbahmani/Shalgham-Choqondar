@@ -79,8 +79,8 @@ class Client:
 
     def connect_to_ext_servers(self):
         while True:
-            user_input = "Shalgham"
-            # user_input = input()
+            # user_input = "Shalgham"
+            user_input = input()
             match = re.match("(?P<server>(Shalgham|Choghondar))( via (?P<port>\d+))?", user_input)
             if not match:
                 print("Invalid Server name")
@@ -140,6 +140,7 @@ class MessengerClient:
         response = self.get_response()
         if response.status_code != 200:
             print(response.message)
+            return
         self.session_id = response.data["session_id"]
         self.chatrooms = response.data["chatrooms"]
         self.messenger()
