@@ -44,6 +44,13 @@ class MessengerMenu(Menu, metaclass=SingletonMeta):
         super().__init__()
 
 
+class ChatroomMenu(Menu, metaclass=SingletonMeta):
+    OPEN_CHATROOM = "OpenChatroom"
+    SEND_MESSAGE = "SendMessage"
+    UPDATE_CHATROOM = "UpdateChatroom"
+    UPDATE_CHATROOMS_LIST = "GetChatrooms"
+    GET_X_LAST_MESSAGES = "GetXLastMessages"
+
 class MenuItem:
     def __init__(self, text: str, regex: str, handler, menu, command_to_send: str = None) -> None:
         self.text = text

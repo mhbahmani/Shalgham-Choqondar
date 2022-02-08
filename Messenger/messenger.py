@@ -1,14 +1,15 @@
-from models import ResponseEncoder
+from models import ResponseEncoder, ChatRoom, User, Response
 from menus import CommandHandler
-from models import User, Response
 
 from hashlib import sha256
 from passlib.hash import bcrypt
 
 import threading
+import binascii
 import logging
 import socket
 import json
+import os
 
 
 BUFF_SIZE = 1024
@@ -17,7 +18,7 @@ class MessengerServer:
     hasher = bcrypt.using(rounds=13)
     server: socket.socket
     HOST: str = '127.0.0.1'
-    PORT: int = 8002
+    PORT: int = 8001
 
     def __init__(self) -> None:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -25,35 +26,84 @@ class MessengerServer:
         self.server.listen(1)
         logging.info(f"MessengerServer is listening on {MessengerServer.HOST}:{MessengerServer.PORT}")
 
-        self.users: list = []
+        self.users = []
+        self.online_users = {}
         self.clients_socket = {}
         self.end = False
 
-    def signup(self, args):
+    def signup(self, args, client: socket.socket = None):
         try:
-            self.users.append(
-                User(
-                    username=User._is_valid_username(args[1], self.users),
-                    password=MessengerServer.hasher.hash(args[2])
-                )
+            new_user =  User(
+                username=User._is_valid_username(args[1], self.users),
+                password=MessengerServer.hasher.hash(args[2])
             )
+            for other_user in self.users:
+                new_user.add_new_chatroom(other_user)
+            self.users.append(new_user)
             return Response(201, "Signup Successful")
         except ValueError as e:
-            return e
+            return Response(400, "Username is not available")
 
-    def login(self, args):
+    def login(self, args, client: socket.socket):
+        # try:
+        username, password_hash = args[1], args[2]
+        for user in self.users:
+            if user.username == username and MessengerServer.hasher.verify(password_hash, user.password):
+                client_session_id = binascii.hexlify(os.urandom(20)).decode()
+                self.clients_socket[client_session_id] = client
+                self.online_users[client_session_id] = user
+                return Response(200, "Login Successful", {"session_id": client_session_id, "chatrooms": user.get_chatrooms()})
+        return Response(401, "Incorrect username or password")
+        # except Exception as e:
+        #     logging.log(e)
+
+    def open_chatroom(self, args, client: socket.socket):
         try:
-            username = args[1]
-            password_hash = args[2]
-            for user in self.users:
-                if user.username == username and MessengerServer.hasher.verify(password_hash, user.password):
-                    #TODO: update session_id
-                    return Response(200, "Login Successful")
-            return Response(401, "Login Failed")
+            session_id, contact_username = args[0], args[1]
+            user = self.online_users.get(session_id)
+            if not user: return Response(401, "You are not logged in")
+            chatroom: ChatRoom = user.chatrooms.get(contact_username)
+            if not chatroom: return Response(401, "Chatroom not found")
+            return Response(200, "Chatroom opened", {"chatroom": chatroom.get_messages()})
         except Exception as e:
-            logging.log(e)
-            
+            logging.info(e)
 
+    def send_message(self, args, client: socket.socket):
+        try:
+            session_id, contact_username, message = args[0], args[1], args[2]
+            user = self.online_users.get(session_id)
+            if not user: return Response(401, "You are not logged in")
+            chatroom: ChatRoom = user.chatrooms.get(contact_username)
+            if not chatroom: return Response(401, "Chatroom not found")
+            chatroom.add_message(message)
+            return Response(200, "Message sent")
+        except Exception as e:
+            logging.info(e)
+
+    def update_chatroom(self, args, client: socket.socket):
+        try:
+            session_id, contact_username = args[0], args[1]
+            user = self.online_users.get(session_id)
+            if not user: return Response(401, "You are not logged in")
+            chatroom: ChatRoom = user.chatrooms.get(contact_username)
+            if not chatroom: return Response(401, "Chatroom not found")
+            return Response(200, "Chatroom Updated", {"chatroom": chatroom.get_unread_messages()})
+        except Exception as e:
+            logging.info(e)
+
+    def get_chatrooms(self, args, client: socket.socket):
+        session_id = args[0]
+        user = self.online_users.get(session_id)
+        if not user: return Response(401, "You are not logged in")
+        return Response(200, "Login Successful", {"chatrooms": user.get_chatrooms()})
+
+    def get_x_last_messages(self, args, client):
+        session_id, contact_username, num_messages = args[0], args[1], int(args[2])
+        user = self.online_users.get(session_id)
+        if not user: return Response(401, "You are not logged in")
+        chatroom: ChatRoom = user.chatrooms.get(contact_username)
+        if not chatroom: return Response(401, "Chatroom not found")
+        return Response(200, "Messages Fetched", {"messages": chatroom.get_messages(num_messages)})
     def exit(self):
         pass
 
@@ -63,15 +113,15 @@ class MessengerServer:
                 message = client.recv(BUFF_SIZE).decode("ascii")
                 handler, args = CommandHandler.parse(message)
                 args = list(args)
-                response: Response = handler(self, args)
+                response: Response = handler(self, args, client)
                 self.send_response_to_client(client, response)
-            except ValueError:
-                self.send_message_to_client(client, response)
+            except ValueError as e:
+                self.send_message_to_client(client, e.__str__())
                 continue
-            except:
-                logging.log("Something went wrong")
-                client.close()
-                break
+            # except:
+            #     logging.info("Something went wrong")
+            #     client.close()
+            #     break
 
     def send_message_to_client(self, client: socket.socket, message: str):
         client.send(message.encode("ascii"))
@@ -109,5 +159,8 @@ if __name__ == "__main__":
             'ERROR': logging.ERROR,
             }['INFO'])
     server = MessengerServer()
+    server.signup(["signup", "a", "a"])
+    server.signup(["signup", "aa", "aa"])
+    server.signup(["signup", "aaa", "aaa"])
     server.server_listener()
     server.server.close()

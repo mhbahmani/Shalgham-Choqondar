@@ -7,6 +7,13 @@ class CommandHandler(metaclass=SingletonMeta):
     SIGNUP = "Signup"
     LOGIN = "Login"
 
+    OPEN_CHATROOM = "OpenChatroom"
+    SEND_MESSAGE = "SendMessage"
+    UPDATE_CHATROOM = "UpdateChatroom"
+    UPDATE_CHATROOMS_LIST = "GetChatrooms"
+    GET_X_LAST_MESSAGES = "GetXLastMessages"
+
+
     def __init__(self) -> None:
         from messenger import MessengerServer
         self.commands = [
@@ -17,7 +24,27 @@ class CommandHandler(metaclass=SingletonMeta):
             Command(
                 CommandHandler.LOGIN,
                 re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.LOGIN}::(?P<username>\w+)\|,\|(?P<password>\w+)"),
-                MessengerServer.login, self)
+                MessengerServer.login, self),
+            Command(
+                CommandHandler.OPEN_CHATROOM,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.OPEN_CHATROOM}::(?P<username>\w+)"),
+                MessengerServer.open_chatroom, self),
+            Command(
+                CommandHandler.SEND_MESSAGE,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.SEND_MESSAGE}::(?P<contact>\w+)\|,\|(?P<message>.+)"),
+                MessengerServer.send_message, self),
+            Command(
+                CommandHandler.UPDATE_CHATROOM,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.UPDATE_CHATROOM}::(?P<contact>\w+)"),
+                MessengerServer.update_chatroom, self),
+            Command(
+                CommandHandler.UPDATE_CHATROOMS_LIST,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.UPDATE_CHATROOMS_LIST}"),
+                MessengerServer.get_chatrooms, self),
+            Command(
+                CommandHandler.GET_X_LAST_MESSAGES,
+                re.compile(f"(?P<session_id>[\w|=]+)::{CommandHandler.GET_X_LAST_MESSAGES}::(?P<contact>\w+)\|,\|(?P<num_messages>\d+)"),
+                MessengerServer.get_x_last_messages, self)
         ]
 
 
