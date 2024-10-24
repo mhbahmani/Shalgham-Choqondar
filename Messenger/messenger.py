@@ -160,7 +160,6 @@ class MessengerServer:
             for key, mask in events:
                 callback = key.data
                 logging.debug(f"Callback: {callback}")
-                print(key.fileobj)
                 callback(key.fileobj)
 
     def accept(self, server_socket):
