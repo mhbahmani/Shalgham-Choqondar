@@ -170,7 +170,8 @@ class MessengerClient:
         write_thread.join()
 
     def exit(self) -> None:
-        pass
+        self.socket.close()
+        exit(0) # TODO: Go back to main menu
 
     def handle(self) -> None:
         while True:
