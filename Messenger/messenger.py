@@ -5,6 +5,7 @@ from hashlib import sha256
 from passlib.hash import bcrypt
 
 import threading
+import selectors
 import binascii
 import logging
 import socket
@@ -22,9 +23,14 @@ class MessengerServer:
 
     def __init__(self) -> None:
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server.setblocking(False)
         self.server.bind((MessengerServer.HOST, MessengerServer.PORT))
         self.server.listen(1)
+
         logging.info(f"MessengerServer is listening on {MessengerServer.HOST}:{MessengerServer.PORT}")
+        
+        self.selector = selectors.DefaultSelector()
+        self.selector.register(self.server, selectors.EVENT_READ, self.accept)
 
         self.users = []
         self.online_users = {}
@@ -107,21 +113,40 @@ class MessengerServer:
     def exit(self):
         pass
 
-    def handle_client(self, client: socket.socket, session_id: str):
-        while not self.end:
-            try:
-                message = client.recv(BUFF_SIZE).decode("ascii")
+    def read(self, client):
+        try:
+            message = client.recv(BUFF_SIZE).decode("ascii")
+            logging.debug(f"Received message: {message}")
+            if message:
                 handler, args = CommandHandler.parse(message)
                 args = list(args)
                 response: Response = handler(self, args, client)
                 self.send_response_to_client(client, response)
-            except ValueError as e:
-                self.send_message_to_client(client, e.__str__())
-                continue
-            # except:
-            #     logging.info("Something went wrong")
-            #     client.close()
-            #     break
+            else:
+                logging.info("Closing connection")
+                self.selector.unregister(client)
+                client.close()
+        except Exception as e:
+            logging.info(e)
+            self.selector.unregister(client)
+            client.close()
+
+    # Used in old blocking method
+    # def handle_client(self, client: socket.socket, session_id: str):
+    #     while not self.end:
+    #         try:
+    #             message = client.recv(BUFF_SIZE).decode("ascii")
+    #             handler, args = CommandHandler.parse(message)
+    #             args = list(args)
+    #             response: Response = handler(self, args, client)
+    #             self.send_response_to_client(client, response)
+    #         except ValueError as e:
+    #             self.send_message_to_client(client, e.__str__())
+    #             continue
+    #         # except:
+    #         #     logging.info("Something went wrong")
+    #         #     client.close()
+    #         #     break
 
     def send_message_to_client(self, client: socket.socket, message: str):
         client.send(message.encode("ascii"))
@@ -129,18 +154,38 @@ class MessengerServer:
     def send_response_to_client(self, client: socket.socket, response: Response):
         client.send(json.dumps(response, indent=4, cls=ResponseEncoder).encode("ascii"))
 
-    def server_listener(self):
+    def non_blocking_server_listener(self):
         while not self.end:
-            try:
-                if self.end: break
-                client, address = self.server.accept()
-                session_id = sha256(bytes(f"client{address}", "utf-8")).hexdigest()[-20:]
-                logging.info(f"New player accepted with id {session_id}")
-                client.send(session_id.encode("ascii"))
-                self.clients_socket[session_id] = client
-                threading.Thread(target=self.handle_client, args=(client, session_id,)).start()
-            except:
-                break
+            events = self.selector.select(timeout=None)
+            for key, mask in events:
+                callback = key.data
+                logging.debug(f"Callback: {callback}")
+                print(key.fileobj)
+                callback(key.fileobj)
+
+    def accept(self, server_socket):
+        client, address = server_socket.accept()
+        client.setblocking(False)
+        session_id = sha256(bytes(f"client{address}", "utf-8")).hexdigest()[-20:]
+        logging.info(f"New player accepted with id {session_id}")
+
+        client.send(session_id.encode("ascii"))
+        self.clients_socket[session_id] = client
+        self.selector.register(client, selectors.EVENT_READ, self.read)
+
+    # Used in old blocking method
+    # def server_listener(self):
+    #     while not self.end:
+    #         try:
+    #             if self.end: break
+    #             client, address = self.server.accept()
+    #             session_id = sha256(bytes(f"client{address}", "utf-8")).hexdigest()[-20:]
+    #             logging.info(f"New player accepted with id {session_id}")
+    #             client.send(session_id.encode("ascii"))
+    #             self.clients_socket[session_id] = client
+    #             threading.Thread(target=self.handle_client, args=(client, session_id,)).start()
+    #         except:
+    #             break
 
 class ProxyServer:
     def __init__(self) -> None:
@@ -162,5 +207,6 @@ if __name__ == "__main__":
     server.signup(["signup", "a", "a"])
     server.signup(["signup", "aa", "aa"])
     server.signup(["signup", "aaa", "aaa"])
-    server.server_listener()
+    # server.server_listener()
+    server.non_blocking_server_listener()
     server.server.close()
